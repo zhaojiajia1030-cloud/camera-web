@@ -1,92 +1,118 @@
 # 🚀 部署到 GitHub Pages 操作手册
 
-**预计用时 3 分钟** ｜ 仓库地址：https://github.com/z243069942/camera-web
+**预计用时 3 分钟**
 
-网页文件已经准备好了，你只需要创建远程仓库 → 推送 → 开启 Pages 三步。
+网页文件已准备好，你只需创建远程仓库 → 推送 → 开启 Pages 三步。
+
+**目标仓库：** `https://github.com/zhaojiajia1030-cloud/camera-web`
+**上线地址：** `https://zhaojiajia1030-cloud.github.io/camera-web/`
 
 ---
 
-## 第 1 步：创建远程仓库（1 分钟）
+## ⚠️ 先读这一条：仓库名一定要手动改
 
-在浏览器打开：
+VSCode 的「发布到 GitHub 仓库」会自动拿**文件夹名**当仓库名。本地文件夹叫 `_deploy`，所以它默认会建成：
 
-👉 **https://github.com/new**
+```
+zhaojiajia1030-cloud/_deploy     ← 不对
+zhaojiajia1030-cloud/camera-web   ← 要改成这个
+```
 
-按下面填：
+**发布时一定要在弹出的输入框里把名字改成 `camera-web`。**
+
+---
+
+## 第 1 步：删除误建的 _deploy 仓库
+
+1. 打开 https://github.com/zhaojiajia1030-cloud/_deploy
+2. 右侧 **Settings** → 滑到最底 **Danger Zone** → **Delete this repository**
+3. 按提示输入完整仓库名 `_deploy` 确认删除
+
+> 删掉不影响本地文件，只是清掉远程的垃圾仓库。
+
+---
+
+## 第 2 步：创建 camera-web 仓库
+
+打开 👉 **https://github.com/new**
 
 | 填写项 | 内容 |
 |---|---|
-| Owner | `z243069942`（你的账号） |
-| Repository name | `camera-web` |
+| Owner | `zhaojiajia1030-cloud` |
+| Repository name | **`camera-web`** ← 关键，别写成 `_deploy` |
 | Description | 手机摄像头视频捕获网页 |
-| Public / Private | **Public** ← Pages 免费版必须是公开仓库 |
+| Public / Private | **Public**（Pages 免费版必须公开） |
 
-⚠️ **不要勾选** "Add a README file"、"Add .gitignore"、"Choose a license"（本地已有提交，勾了会冲突）
+⚠️ **不要勾选** "Add a README file"、"Add .gitignore"、"Choose a license"
+（本地已有提交，勾了会冲突）
 
-点击绿色的 **Create repository**
+点击绿色 **Create repository**
 
 ---
 
-## 第 2 步：推送文件（1 分钟）
+## 第 3 步：推送文件
 
-### 方式 A：VSCode（推荐，你平时用这个）
+### 方式 A：VSCode（推荐）
 
-1. 在 VSCode 打开文件夹：
+1. VSCode 打开文件夹：
    `D:\BaiduNetdiskDownload\code\code\mobile_camera_capture\_deploy`
 
-2. 点左侧「源代码管理」图标 → 「发布到 GitHub 仓库」
+2. 点左侧「源代码管理」图标
 
-3. 登录你的 GitHub 账号 → 选择 **Publish to GitHub**
+3. 点 **「发布 Branch」/「Publish Branch」** 按钮
+   （因为 remote 已清空，这里会提示发布到 GitHub）
 
-4. 仓库名填 `camera-web` → 确认发布
+4. 弹出的输入框里**把仓库名改成 `camera-web`**，登录账号选 `zhaojiajia1030-cloud`
 
-### 方式 B：命令行
+5. 确认发布
 
-打开 VSCode 的终端（Ctrl + `），确认当前目录是 `_deploy`，然后粘贴执行：
+### 方式 B：命令行（更可控，推荐）
+
+VSCode 里按 `Ctrl + `` 打开终端：
 
 ```bash
 cd /d D:\BaiduNetdiskDownload\code\code\mobile_camera_capture\_deploy
-git remote add origin https://github.com/z243069942/camera-web.git
+git remote add origin https://github.com/zhaojiajia1030-cloud/camera-web.git
 git push -u origin main
 ```
 
-推送时会要求登录：
+推送时要求登录：
 
-- **Username**：填 `z243069942`
+- **Username**：`zhaojiajia1030-cloud`
 - **Password**：粘贴 **Personal Access Token**（不是登录密码！）
 
-> Token 怎么拿：https://github.com/settings/tokens → Generate new token (classic) → 勾选 `repo` → Generate → 复制（**只显示一次**）
-
-> VSCode 可能弹窗要求登录授权，点「使用 GitHub 登录」用浏览器授权更方便。
+> Token 获取：https://github.com/settings/tokens
+> → Generate new token (classic) → 勾选 `repo` → Generate
+> → 复制（**只显示一次，务必立刻保存**）
 
 ---
 
-## 第 3 步：开启 Pages（1 分钟）
+## 第 4 步：开启 Pages
 
 仓库创建并推送成功后：
 
-1. 打开仓库的 **Settings**：
-   👉 https://github.com/z243069942/camera-web/settings/pages
+1. 打开 👉 **https://github.com/zhaojiajia1030-cloud/camera-web/settings/pages**
 
-2. 找到 **Pages** 区域 → **Source** 下拉框选择：
+2. 找到 **Pages** 区域 → **Source** 下拉选择：
 
    ```
    ● Deploy from a branch
    ```
 
-3. 右侧两个下拉依次选：
+3. 两个下拉依次选：
 
    | 下拉框 | 选择 |
    |---|---|
    | 分支 branch | `main` |
    | 目录 folder | `/ (root)` |
 
-4. 点击 **Save**
+4. 点 **Save**
 
-5. 等待 1–2 分钟，页面会自动刷新，出现：
+5. 等 1–2 分钟，页面自动刷新，出现：
 
    ```
-   ✅ Your site is live at https://z243069942.github.io/camera-web/
+   ✅ Your site is live at
+   https://zhaojiajia1030-cloud.github.io/camera-web/
    ```
 
 ---
@@ -95,9 +121,9 @@ git push -u origin main
 
 **手机浏览器打开：**
 
-# https://z243069942.github.io/camera-web/
+# https://zhaojiajia1030-cloud.github.io/camera-web/
 
-打开后：
+操作流程：
 
 1. 顶部徽章显示「环境正常」✅
 2. 点 **「开启摄像头」**
@@ -110,43 +136,61 @@ git push -u origin main
 
 ## ⚠️ 常见问题
 
-**Q：推送时提示 `remote origin already exists`**
+**Q：仓库名又变成 `_deploy` 了**
+本地文件夹就叫 `_deploy`，VSCode 默认用文件夹名。重新发布时在输入框里改成 `camera-web`，或者直接用上面的命令行方式（仓库名写在命令里，不会错）。
+
+**Q：推送提示 `remote origin already exists`**
 ```bash
-git remote set-url origin https://github.com/z243069942/camera-web.git
+git remote remove origin
+git remote add origin https://github.com/zhaojiajia1030-cloud/camera-web.git
 git push -u origin main
 ```
 
-**Q：推送时提示 `Authentication failed`**
-用的是登录密码而不是 Token。去 https://github.com/settings/tokens 生成一个，勾选 `repo` 权限。
+**Q：推送提示 `Authentication failed`**
+用的是登录密码而不是 Token。去 https://github.com/settings/tokens 生成，勾 `repo` 权限。
 
-**Q：推送时提示 `rejected: fetch first` / `non-fast-forward`**
-远程仓库有本地没有的提交（可能建仓库时勾了 README）。执行：
+**Q：推送提示 `rejected: fetch first` / `non-fast-forward`**
+建仓库时勾了 README，与本地提交无关联。执行：
 ```bash
 git pull origin main --allow-unrelated-histories
 git push -u origin main
 ```
 
-**Q：Pages 页面显示 404**
-Pages 还在构建，等 1–2 分钟刷新。还不行就回 Settings → Pages 确认 Source 选的是 `main` 分支 + `/ (root)`。
+**Q：Pages 显示 404**
+构建需要 1–2 分钟，稍等刷新。还不行就回 Settings → Pages 确认 Source 是 `main` + `/ (root)`。
 
-**Q：Pages 地址能打开但摄像头无反应**
-必须是 `https://z243069942.github.io/...` 这个地址才能用摄像头。如果你是用 `http://` 或直接打开本地 `index.html`，浏览器会拒绝授权 —— 这是浏览器的安全策略，不是网页的问题。
+**Q：地址能打开但摄像头无反应**
+必须用 `https://zhaojiajia1030-cloud.github.io/...` 这个地址。打开本地 `index.html`（`file://`）或用 `http://` 访问，浏览器都会拒绝授权 —— 这是浏览器安全策略，不是网页的问题。
 
 **Q：想改网页内容**
-改 `index.html` 后，在 `_deploy` 目录执行 `git add . && git commit -m "update" && git push`，1–2 分钟后线上自动更新。
+改完 `index.html` 后，在该目录执行：
+```bash
+git add . && git commit -m "update" && git push
+```
+1–2 分钟后线上自动更新。
 
 ---
 
-## 📁 本地文件位置
+## 📁 文件位置
 
 ```
 D:\BaiduNetdiskDownload\code\code\mobile_camera_capture\
 ├── index.html      网页本体（部署的就是它）
 ├── start_https.py  本地 HTTPS 测试服务器（不部署）
-├── README.md       完整使用说明
+├── README.md       使用说明
+├── 部署指南.md      本文件
 └── _deploy\        待推送的 git 仓库
     ├── index.html
     ├── README.md
+    ├── DEPLOY.md
     ├── .nojekyll   告诉 GitHub Pages 不要用 Jekyll 处理
     └── .git\
 ```
+
+---
+
+## 🔐 关于账号
+
+本次部署使用的是 **`zhaojiajia1030-cloud`** 账号（VSCode 当前登录的账号）。
+
+如果你更希望用另一个账号托管，删掉已建的仓库后重新创建时切换 Owner 即可。
