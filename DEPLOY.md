@@ -1,24 +1,27 @@
 # 🚀 部署到 GitHub Pages 操作手册
 
-**预计用时 3 分钟**
+**✅ 已部署完成（2026-10-15）**
 
-网页文件已准备好，你只需创建远程仓库 → 推送 → 开启 Pages 三步。
+**线上地址：** https://zhaojiajia1030-cloud.github.io/camera-web/
 
-**目标仓库：** `https://github.com/zhaojiajia1030-cloud/camera-web`
-**上线地址：** `https://zhaojiajia1030-cloud.github.io/camera-web/`
+手机浏览器直接打开上面这个地址 → 点「开启摄像头」→ 允许权限 → 即可录制下载。
+
+仓库地址：https://github.com/zhaojiajia1030-cloud/camera-web
+
+> 以下为首次部署的操作记录，如需重新部署可参考。
 
 ---
 
-## ⚠️ 先读这一条：仓库名一定要手动改
+## ⚠️ 首次部署时踩的坑：仓库名一定要手动改
 
-VSCode 的「发布到 GitHub 仓库」会自动拿**文件夹名**当仓库名。本地文件夹叫 `_deploy`，所以它默认会建成：
+VSCode 的「发布到 GitHub 仓库」会自动拿**文件夹名**当仓库名。本地文件夹叫 `_deploy`，所以第一次发布建成了：
 
 ```
-zhaojiajia1030-cloud/_deploy     ← 不对
-zhaojiajia1030-cloud/camera-web   ← 要改成这个
+zhaojiajia1030-cloud/_deploy     ← 误建
+zhaojiajia1030-cloud/camera-web   ← 正确
 ```
 
-**发布时一定要在弹出的输入框里把名字改成 `camera-web`。**
+**解决办法**：先在网页上建好 `camera-web` 仓库，再执行 `git remote add origin <目标URL>` + `git push`，仓库名写在 URL 里就不会错。
 
 ---
 
