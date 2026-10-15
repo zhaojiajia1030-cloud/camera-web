@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>手机摄像头视频捕获</title>
+<style>
+:root{
+  --bg:#0d1117;
+  --panel:#161b22;
+  --panel-2:#1c2430;
+  --line:#2d3644;
+  --txt:#e6edf3;
+  --txt-dim:#8b949e;
+  --accent:#2f81f7;
+  --rec:#f85149;
+  --ok:#3fb950;
+  --warn:#d29922;
+  --radius:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  display:flex;flex-direction:column;
+  overflow-x:hidden;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+/* ---------- 顶栏 ---------- */
+header{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;
+  padding-top:calc(14px + env(safe-area-inset-top));
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+  flex-shrink:0;
+}
+header h1{font-size:16px;margin:0;font-weight:600;flex:1;}
+.badge{
+  font-size:11px;padding:3px 8px;border-radius:20px;
+  background:var(--panel-2);color:var(--txt-dim);border:1px solid var(--line);
+  white-space:nowrap;
+}
+.badge.ok{color:var(--ok);border-color:rgba(63,185,80,.4);}
+.badge.rec{color:#fff;background:var(--rec);border-color:var(--rec);}
+/* ---------- 视频区 ---------- */
+.stage{
+  position:relative;
+  background:#000;
+  flex:1 1 auto;
+  min-height:220px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+#video{
+  width:100%;height:100%;
+  object-fit:contain;
+  display:block;
+  background:#000;
+}
+#placeholder{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:28px;text-align:center;color:var(--txt-dim);
+}
+#placeholder .ico{font-size:52px;line-height:1;}
+#placeholder .msg{font-size:15px;line-height:1.7;max-width:420px;}
+#placeholder .hint{font-size:13px;line-height:1.8;max-width:460px;}
+#placeholder code{
+  background:var(--panel-2);padding:2px 6px;border-radius:4px;
+  font-size:12px;color:var(--txt);font-family:ui-monospace,Consolas,monospace;
+}
+/* 叠加信息 */
+.overlay{
+  position:absolute;left:12px;top:12px;
+  display:flex;flex-direction:column;gap:6px;
+  font-size:12px;font-family:ui-monospace,Consolas,monospace;
+  pointer-events:none;
+}
+.pill{
+  background:rgba(0,0,0,.62);
+  padding:4px 9px;border-radius:14px;
+  backdrop-filter:blur(6px);
+  display:inline-block;
+}
+.pill.rec{display:flex;align-items:center;gap:6px;color:#fff;}
+.dot{
+  width:9px;height:9px;border-radius:50%;background:var(--rec);
+  animation:blink 1s infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+/* 九宫格构图线 */
+#grid{
+  position:absolute;inset:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(to right,  rgba(255,255,255,.32) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.32) 1px, transparent 1px);
+  background-size:33.333% 33.333%;
+  background-position:-1px -1px;
+  box-shadow:inset 0 0 0 100px rgba(0,0,0,0);
+}
+/* ---------- 错误横幅 ---------- */
+.banner{
+  margin:12px 14px 0;padding:12px 14px;
+  border-radius:var(--radius);
+  font-size:13px;line-height:1.75;
+  display:none;
+  border:1px solid;
+}
+.banner.show{display:block;}
+.banner.err{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.4);color:#ffb4ae;}
+.banner.warn{background:rgba(210,153,34,.1);border-color:rgba(210,153,34,.4);color:#e3b341;}
+.banner.info{background:rgba(47,129,247,.1);border-color:rgba(47,129,247,.4);color:#79c0ff;}
+.banner b{display:block;margin-bottom:4px;font-size:14px;}
+.banner ul{margin:6px 0 0;padding-left:20px;}
+.banner li{margin:3px 0;}
+/* ---------- 控制面板 ---------- */
+.panel{padding:14px;display:flex;flex-direction:column;gap:12px;flex-shrink:0;}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+button{
+  flex:1;min-width:88px;
+  padding:13px 12px;
+  font-size:15px;font-weight:500;
+  color:var(--txt);
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  cursor:pointer;
+  transition:transform .08s, background .15s, opacity .15s;
+  font-family:inherit;
+  user-select:none;
+}
+button:active:not(:disabled){transform:scale(.96);}
+button:disabled{opacity:.42;cursor:not-allowed;}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+button.rec-btn{background:var(--rec);border-color:var(--rec);color:#fff;font-weight:700;}
+button.mini{flex:0 0 auto;min-width:0;padding:9px 13px;font-size:13px;}
+select{
+  flex:1;min-width:120px;
+  padding:12px;
+  font-size:14px;
+  color:var(--txt);
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  font-family:inherit;
+}
+label.sw{
+  display:flex;align-items:center;gap:9px;
+  font-size:14px;color:var(--txt);
+  cursor:pointer;
+  flex:1;min-width:130px;
+}
+label.sw input{
+  appearance:none;-webkit-appearance:none;
+  width:44px;height:26px;border-radius:13px;
+  background:var(--panel-2);border:1px solid var(--line);
+  position:relative;transition:background .2s;
+  flex-shrink:0;cursor:pointer;
+}
+label.sw input:checked{background:var(--accent);border-color:var(--accent);}
+label.sw input::after{
+  content:"";position:absolute;top:2px;left:2px;
+  width:20px;height:20px;border-radius:50%;
+  background:#fff;transition:transform .2s;
+}
+label.sw input:checked::after{transform:translateX(18px);}
+/* 计时器显示 */
+.timer{
+  font-family:ui-monospace,Consolas,monospace;
+  font-size:15px;color:var(--txt-dim);
+  text-align:center;padding:2px;
+}
+/* ---------- 录制结果列表 ---------- */
+.list-head{
+  display:flex;align-items:center;gap:10px;
+  padding:4px 14px 0;font-size:13px;color:var(--txt-dim);
+}
+.list-head .t{flex:1;}
+#clips{display:flex;flex-direction:column;gap:8px;padding:10px 14px 4px;max-height:180px;overflow-y:auto;}
+.clip{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  font-size:13px;
+}
+.clip .meta{flex:1;min-width:0;}
+.clip .name{
+  font-family:ui-monospace,Consolas,monospace;
+  font-size:13px;color:var(--txt);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.clip .sub{font-size:11px;color:var(--txt-dim);margin-top:2px;}
+.clip video{width:100%;border-radius:8px;background:#000;max-height:0;opacity:0;transition:all .2s;overflow:hidden;}
+.clip.open video{max-height:130px;opacity:1;margin-bottom:8px;}
+.empty{text-align:center;color:var(--txt-dim);font-size:13px;padding:16px;}
+/* 全屏预览 */
+#fullview{
+  position:fixed;inset:0;background:#000;
+  display:none;align-items:center;justify-content:center;
+  z-index:99;padding:0;
+}
+#fullview.show{display:flex;}
+#fullview video{width:100%;height:100%;object-fit:contain;}
+#fullview .close{
+  position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;
+  flex:0 0 auto;min-width:0;width:42px;height:42px;
+  border-radius:50%;font-size:20px;
+  background:rgba(0,0,0,.6);border:1px solid var(--line);
+}
+footer{
+  padding:10px 14px 16px;
+  font-size:11px;color:var(--txt-dim);text-align:center;line-height:1.7;
+  border-top:1px solid var(--line);
+}
+@media (max-width:360px){
+  button{min-width:70px;font-size:14px;padding:12px 8px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📷 手机摄像头捕获</h1>
+  <span class="badge" id="envBadge">检测中…</span>
+  <span class="badge rec" id="recBadge" style="display:none">● REC</span>
+</header>
+
+<div class="stage">
+  <video id="video" playsinline autoplay muted></video>
+  <div id="placeholder">
+    <div class="ico">📷</div>
+    <div class="msg" id="phMsg">点击下方按钮开启摄像头</div>
+    <div class="hint" id="phHint"></div>
+  </div>
+  <div class="overlay">
+    <span class="pill" id="info">未启动</span>
+    <span class="pill rec" id="timer" style="display:none"><span class="dot"></span><span id="timeTxt">00:00</span></span>
+  </div>
+  <div id="grid" style="display:none"></div>
+</div>
+
+<div class="banner" id="banner"></div>
+
+<div class="panel">
+  <div class="row">
+    <button class="primary" id="btnStart">开启摄像头</button>
+    <button class="rec-btn" id="btnRec" disabled>● 开始录制</button>
+  </div>
+  <div class="row">
+    <select id="cameraSel" disabled>
+      <option value="">默认摄像头</option>
+    </select>
+    <button class="mini" id="btnFlip" disabled>切换镜头</button>
+    <button class="mini" id="btnTorch" disabled>补光灯</button>
+    <button class="mini" id="btnFull" disabled>全屏</button>
+  </div>
+  <div class="row">
+    <label class="sw"><input type="checkbox" id="chkAudio" checked><span>录制声音</span></label>
+    <label class="sw"><input type="checkbox" id="chkMirror"><span>镜像画面</span></label>
+    <label class="sw"><input type="checkbox" id="chkPause" checked><span>后台自动停止</span></label>
+  </div>
+  <div class="row">
+    <label class="sw"><input type="checkbox" id="chkGrid"><span>九宫格构图线</span></label>
+    <label class="sw"><input type="checkbox" id="chkInfo" checked><span>显示参数信息</span></label>
+  </div>
+  <div class="timer" id="sizeTip"></div>
+</div>
+
+<div class="list-head">
+  <span class="t">🎬 录制结果</span>
+  <button class="mini" id="btnDlAll" disabled>全部下载</button>
+  <button class="mini" id="btnClear" disabled>清空</button>
+</div>
+<div id="clips"><div class="empty">还没有录制片段</div></div>
+
+<footer>
+  纯前端实现 · 视频不会上传服务器，全部在浏览器本地处理<br>
+  需要 HTTPS 环境才能访问摄像头（详见页面内提示）
+</footer>
+
+<div id="fullview">
+  <video id="fvVideo" playsinline controls></video>
+  <button class="close" id="btnFvClose">✕</button>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+ *  手机摄像头视频捕获 —— 纯前端实现
+ *  核心技术：navigator.mediaDevices.getUserMedia + MediaRecorder
+ *  适用：Chrome/Edge/Firefox/Safari 移动端浏览器（需 HTTPS）
+ * ============================================================ */
+
+const $ = id => document.getElementById(id);
+const video   = $("video");
+const clipsBox= $("clips");
+const banner  = $("banner");
+
+let stream = null;        // 当前媒体流
+let recorder = null;      // 录制器
+let chunks = [];          // 录制数据分片
+let clips = [];           // 已完成的片段 [{blob, url, name, size, dur}]
+let recTimer = null;      // 计时器
+let recStart = 0;
+let torchOn = false;
+let isRecording = false;
+let currentFacing = "user";  // 当前朝向："user"前置 / "environment"后置
+                               // 仅表示"期望朝向"，真实朝向以 track.getSettings() 为准
+
+/* ---------- 1. 环境自检 ---------- */
+function checkEnv() {
+  const secure = window.isSecureContext;
+  const hasGUM = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const isFile = location.protocol === "file:";
+  const badge = $("envBadge");
+  const phMsg = $("phMsg");
+  const phHint = $("phHint");
+
+  if (secure && hasGUM) {
+    badge.textContent = "环境正常";
+    badge.className = "badge ok";
+    phMsg.textContent = "点击下方「开启摄像头」开始";
+    phHint.innerHTML = "";
+    return true;
+  }
+
+  badge.textContent = "环境受限";
+  badge.className = "badge";
+  phMsg.textContent = "当前环境无法访问摄像头";
+
+  if (!secure) {
+    if (isFile) {
+      phHint.innerHTML =
+        '当前是以 <code>file://</code> 直接打开本地文件，浏览器会判定为<b>不安全上下文</b>，禁止访问摄像头。<br><br>' +
+        '解决办法（二选一）：<br>' +
+        '① 用本地服务器打开：<br>' +
+        '&nbsp;&nbsp;&nbsp;&nbsp;<code>python -m http.server 8000</code><br>' +
+        '&nbsp;&nbsp;&nbsp;&nbsp;然后访问 <code>http://localhost:8000</code>（电脑端调试）<br>' +
+        '② 部署到任意 HTTPS 站点，手机访问（<b>手机必需</b>）';
+      showBanner("warn",
+        "<b>⚠️ 需要安全上下文（HTTPS 或 localhost）</b>",
+        ["手机浏览器只允许 HTTPS 页面访问摄像头，这是浏览器的安全策略，无法通过代码绕过。",
+         "电脑调试：用 python -m http.server 启动本地服务器，访问 http://localhost:8000",
+         "手机使用：把本文件部署到 GitHub Pages / Netlify / Vercel 等免费 HTTPS 托管，再用手机扫码访问。"]);
+    } else {
+      phHint.innerHTML =
+        '当前是 <code>' + location.protocol + '//</code> 协议，属于不安全上下文。<br><br>' +
+        '请改用 <b>HTTPS</b> 地址访问本页面后重试。';
+      showBanner("warn",
+        "<b>⚠️ 需要 HTTPS 环境</b>",
+        ["当前协议：" + location.protocol + "//，浏览器禁止非安全上下文访问摄像头。",
+         "将页面部署到支持 HTTPS 的托管服务（GitHub Pages / Netlify / Vercel）即可。"]);
+    }
+  } else {
+    phHint.textContent = "当前浏览器不支持 getUserMedia，请更换为 Chrome / Edge / Safari 较新版本。";
+    showBanner("err", "<b>❌ 浏览器不支持</b>",
+      ["未检测到 navigator.mediaDevices.getUserMedia，请升级浏览器或换用 Chrome / Safari。"]);
+  }
+  $("btnStart").disabled = true;
+  return false;
+}
+
+/* ---------- 2. 提示横幅 ---------- */
+function showBanner(type, title, items) {
+  let html = title;
+  if (items && items.length) {
+    html += "<ul>" + items.map(t => "<li>" + t + "</li>").join("") + "</ul>";
+  }
+  banner.className = "banner show " + type;
+  banner.innerHTML = html;
+}
+function hideBanner() {
+  banner.className = "banner";
+  banner.innerHTML = "";
+}
+
+/* ---------- 3. 开启摄像头 ---------- */
+async function startCamera(deviceId) {
+  if (!checkEnv()) return;
+
+  const constraints = {
+    audio: $("chkAudio").checked,
+    video: deviceId
+      ? { deviceId: { exact: deviceId } }
+      : { facingMode: currentFacing,          // 由调用方决定，不在函数内翻转状态
+          width: { ideal: 1920 }, height: { ideal: 1080 } }
+  };
+
+  try {
+    hideBanner();
+    stopStream();
+
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+
+    // 等视频元数据就绪，保证能立刻拿到宽高
+    await new Promise(res => {
+      if (video.readyState >= 1) return res();
+      video.onloadedmetadata = () => res();
+    });
+
+    await video.play().catch(() => {});
+
+    $("placeholder").style.display = "none";
+    $("btnStart").textContent = "重新开启";
+    $("btnRec").disabled = false;
+    $("btnFlip").disabled = false;
+    $("btnTorch").disabled = !hasTorch();
+    $("btnFull").disabled = false;
+
+    updateInfo();
+    applyMirror();
+    listCameras();
+  } catch (err) {
+    handleError(err);
+  }
+}
+
+function handleError(err) {
+  const name = err && err.name;
+  const map = {
+    NotAllowedError: ["err", "<b>❌ 权限被拒绝</b>",
+      ["你拒绝了摄像头/麦克风授权请求。",
+       "请点击地址栏左侧的 🔒 图标 → 允许摄像头和麦克风，然后刷新页面。"]],
+    NotFoundError: ["err", "<b>❌ 未找到摄像头</b>",
+      ["设备上没有检测到可用的摄像头（videoinput）。"]],
+    NotReadableError: ["err", "<b>❌ 摄像头被占用</b>",
+      ["摄像头正被其他应用占用（如相机、微信、视频会议软件），请关闭后重试。"]],
+    OverconstrainedError: ["err", "<b>❌ 分辨率不支持</b>",
+      ["请求的摄像头参数不被支持，请切换镜头或恢复默认设置后重试。"]],
+    SecurityError: ["err", "<b>❌ 安全上下文限制</b>",
+      ["浏览器因页面非安全上下文而拒绝访问摄像头，请改用 HTTPS 地址。"]],
+    AbortError: ["warn", "<b>⚠️ 启动被中断</b>",
+      ["摄像头启动过程中被中断，请重试。"]]
+  };
+  const conf = map[name] || ["err", "<b>❌ 启动失败</b>",
+    ["错误信息：" + (err && err.message ? err.message : String(err))]];
+
+  showBanner(conf[0], conf[1], conf[2]);
+  $("placeholder").style.display = "flex";
+  $("btnRec").disabled = true;
+  $("btnFull").disabled = true;
+  $("info").textContent = "启动失败";
+}
+
+function stopStream() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  video.srcObject = null;
+}
+
+/* ---------- 4. 镜头信息 ---------- */
+function hasTorch() {
+  if (!stream) return false;
+  const t = stream.getVideoTracks()[0];
+  if (!t || !t.getCapabilities) return false;
+  return !!t.getCapabilities().torch;
+}
+
+async function listCameras() {
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const cams = devs.filter(d => d.kind === "videoinput");
+    const sel = $("cameraSel");
+    const cur = stream ? stream.getVideoTracks()[0].getSettings().deviceId : "";
+    sel.innerHTML = "";
+    cams.forEach((d, i) => {
+      const o = document.createElement("option");
+      o.value = d.deviceId;
+      o.textContent = d.label || ("摄像头 " + (i + 1));
+      if (d.deviceId === cur) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.disabled = cams.length <= 1;
+  } catch (e) {
+    /* 枚举失败不影响主流程 */
+  }
+}
+
+function updateInfo() {
+  if (!stream) return;
+  const t = stream.getVideoTracks()[0];
+  if (!t || !t.getSettings) return;
+  const s = t.getSettings();
+  const parts = [];
+  if (s.width && s.height) parts.push(s.width + "×" + s.height);
+  if (s.frameRate) parts.push(Math.round(s.frameRate) + "fps");
+  if (s.facingMode) parts.push(s.facingMode === "environment" ? "后置" : "前置");
+  $("info").textContent = parts.length ? parts.join(" · ") : "已连接";
+}
+
+/* ---------- 5. 镜像 / 画面适配 ---------- */
+function applyMirror() {
+  const mirror = $("chkMirror").checked;
+  video.style.transform = mirror ? "scaleX(-1)" : "none";
+}
+
+/* ---------- 6. 录制 ---------- */
+function pickMime() {
+  // 各浏览器支持的容器不同，按优先级探测
+  const cands = [
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",  // iOS Safari
+    "video/mp4",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm"
+  ];
+  if (typeof MediaRecorder === "undefined") return "";
+  for (const m of cands) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return "";
+}
+
+function startRec() {
+  if (!stream || isRecording) return;
+  if (typeof MediaRecorder === "undefined") {
+    showBanner("err", "<b>❌ 当前浏览器不支持录制</b>",
+      ["MediaRecorder API 不可用，iOS 需 Safari 14.3 以上版本。"]);
+    return;
+  }
+
+  chunks = [];
+  const mime = pickMime();
+
+  try {
+    recorder = mime
+      ? new MediaRecorder(stream, { mimeType: mime })
+      : new MediaRecorder(stream);
+  } catch (e) {
+    showBanner("err", "<b>❌ 录制器创建失败</b>", ["错误信息：" + e.message]);
+    return;
+  }
+
+  recorder.ondataavailable = ev => { if (ev.data && ev.data.size) chunks.push(ev.data); };
+
+  recorder.onstop = () => {
+    const type = (recorder && recorder.mimeType) || "video/webm";
+    const blob = new Blob(chunks, { type });
+    const dur = (Date.now() - recStart) / 1000;
+    stopTimer();
+    isRecording = false;
+    $("btnRec").classList.remove("rec-btn");
+    $("btnRec").classList.add("primary");
+    $("btnRec").textContent = "● 开始录制";
+    $("recBadge").style.display = "none";
+    $("timer").style.display = "none";
+    $("btnStart").disabled = false;
+
+    if (blob.size > 0) {
+      addClip(blob, dur, type);
+      showBanner("info", "<b>✅ 录制完成</b>",
+        ["时长 " + dur.toFixed(1) + " 秒，大小 " + fmtSize(blob.size) + "。可在下方列表中播放或下载。"]);
+    } else {
+      showBanner("warn", "<b>⚠️ 未录到数据</b>", ["录制时长过短，请至少录制 1 秒后再停止。"]);
+    }
+  };
+
+  recorder.start();
+  isRecording = true;
+  recStart = Date.now();
+
+  $("btnRec").classList.add("rec-btn");
+  $("btnRec").classList.remove("primary");
+  $("btnRec").textContent = "■ 停止录制";
+  $("btnStart").disabled = true;
+  $("recBadge").style.display = "";
+  $("timer").style.display = "";
+  $("sizeTip").textContent = "正在录制…";
+  startTimer();
+}
+
+function stopRec() {
+  if (!isRecording || !recorder) return;
+  $("sizeTip").textContent = "正在保存…";
+  try { recorder.stop(); } catch (e) { /* 已停止 */ }
+}
+
+function startTimer() {
+  updateTime();
+  recTimer = setInterval(updateTime, 1000);
+}
+function stopTimer() {
+  if (recTimer) { clearInterval(recTimer); recTimer = null; }
+}
+function updateTime() {
+  const s = Math.floor((Date.now() - recStart) / 1000);
+  $("timeTxt").textContent =
+    String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+
+function fmtSize(b) {
+  if (b < 1024) return b + " B";
+  if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
+  return (b / 1048576).toFixed(2) + " MB";
+}
+
+/* ---------- 7. 片段管理 ---------- */
+function addClip(blob, dur, type) {
+  const url = URL.createObjectURL(blob);
+  const ext = (type.indexOf("mp4") >= 0) ? "mp4" : "webm";
+  const name = "clip_" + stamp() + "." + ext;
+  const clip = { blob, url, name, size: blob.size, dur };
+  clips.push(clip);
+
+  // 空态提示移除
+  const empty = clipsBox.querySelector(".empty");
+  if (empty) empty.remove();
+
+  const el = document.createElement("div");
+  el.className = "clip";
+  el.innerHTML =
+    '<video playsinline preload="metadata"></video>' +
+    '<div class="meta">' +
+      '<div class="name"></div>' +
+      '<div class="sub"></div>' +
+    '</div>' +
+    '<button class="mini act-play">播放</button>' +
+    '<button class="mini act-dl">下载</button>' +
+    '<button class="mini act-del">删除</button>';
+
+  const v = el.querySelector("video");
+  v.src = url;
+  el.querySelector(".name").textContent = name;
+  el.querySelector(".sub").textContent =
+    dur.toFixed(1) + "s · " + fmtSize(blob.size);
+
+  // 点击视频展开预览
+  el.querySelector(".act-play").onclick = () => {
+    const opening = !el.classList.contains("open");
+    el.classList.toggle("open", opening);
+    el.querySelector(".act-play").textContent = opening ? "收起" : "播放";
+    if (opening) v.play().catch(() => {});
+    else { v.pause(); v.currentTime = 0; }
+  };
+
+  el.querySelector(".act-dl").onclick = () => download(blob, name);
+
+  el.querySelector(".act-del").onclick = () => {
+    URL.revokeObjectURL(url);
+    clips = clips.filter(c => c.url !== url);
+    el.remove();
+    if (!clips.length) {
+      clipsBox.innerHTML = '<div class="empty">还没有录制片段</div>';
+    }
+    updateClipBtns();
+  };
+
+  clipsBox.insertBefore(el, clipsBox.firstChild);
+  updateClipBtns();
+}
+
+function updateClipBtns() {
+  $("btnDlAll").disabled = !clips.length;
+  $("btnClear").disabled = !clips.length;
+}
+
+function stamp() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "_" +
+         p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+
+/* ---------- 8. 下载 ---------- */
+function download(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+function downloadAll() {
+  // 逐个触发下载，间隔 400ms 避免浏览器拦截连续下载
+  clips.forEach((c, i) => setTimeout(() => download(c.blob, c.name), i * 400));
+}
+
+/* ---------- 9. 事件绑定 ---------- */
+$("btnStart").onclick = () => startCamera($("cameraSel").value || undefined);
+$("btnRec").onclick = () => isRecording ? stopRec() : startRec();
+
+$("btnFlip").onclick = () => {
+  const sel = $("cameraSel");
+  const opts = sel.options;
+  if (opts.length > 1) {
+    // 有多个物理摄像头时，直接在设备列表间轮换
+    sel.selectedIndex = (sel.selectedIndex + 1) % opts.length;
+    startCamera(sel.value);
+  } else {
+    // 只有一个设备时，按 facingMode 切换前后置
+    currentFacing = (currentFacing === "user") ? "environment" : "user";
+    startCamera(undefined);
+  }
+};
+
+$("btnTorch").onclick = async () => {
+  if (!stream) return;
+  const t = stream.getVideoTracks()[0];
+  if (!t || !t.applyConstraints) return;
+  torchOn = !torchOn;
+  try {
+    await t.applyConstraints({ advanced: [{ torch: torchOn }] });
+    $("btnTorch").textContent = torchOn ? "关闭补光" : "补光灯";
+  } catch (e) {
+    torchOn = false;
+    showBanner("warn", "<b>⚠️ 不支持补光灯</b>",
+      ["当前摄像头未提供补光功能（torch 能力）。"]);
+  }
+};
+
+$("cameraSel").onchange = () => startCamera($("cameraSel").value);
+
+$("chkAudio").onchange = () => {
+  // 注意：修改 enabled 只影响"之后"的录制，已录制片段无法补录声音
+  if (!stream) return;
+  stream.getAudioTracks().forEach(t => { t.enabled = $("chkAudio").checked; });
+  $("sizeTip").textContent = $("chkAudio").checked
+    ? "已开启录音（对之后录制的片段生效）"
+    : "已静音录制";
+};
+
+$("chkMirror").onchange = applyMirror;
+
+$("chkGrid").onchange = () => {
+  $("grid").style.display = $("chkGrid").checked ? "block" : "none";
+};
+
+$("chkInfo").onchange = () => {
+  $("info").style.display = $("chkInfo").checked ? "" : "none";
+  $("sizeTip").style.display = $("chkInfo").checked ? "" : "none";
+};
+
+$("btnDlAll").onclick = downloadAll;
+
+$("btnClear").onclick = () => {
+  if (!clips.length) return;
+  clips.forEach(c => URL.revokeObjectURL(c.url));
+  clips = [];
+  clipsBox.innerHTML = '<div class="empty">还没有录制片段</div>';
+  updateClipBtns();
+  $("sizeTip").textContent = "";
+};
+
+$("btnFvClose").onclick = () => {
+  $("fvVideo").pause();
+  $("fullview").classList.remove("show");
+};
+
+// 录制参数变化提示（教学演示用，便于观察分辨率/帧率差异）
+video.addEventListener("loadedmetadata", () => {
+  $("sizeTip").textContent =
+    "视频尺寸 " + video.videoWidth + "×" + video.videoHeight +
+    "　时长约束上限由摄像头决定";
+});
+
+video.addEventListener("dblclick", () => {
+  if (!stream || !video.videoWidth) return;
+  $("fvVideo").srcObject = stream;
+  $("fullview").classList.add("show");
+  $("fvVideo").play().catch(() => {});
+});
+
+$("btnFull").onclick = () => {
+  if (!stream || !video.videoWidth) return;
+  $("fvVideo").srcObject = stream;
+  $("fullview").classList.add("show");
+  $("fvVideo").play().catch(() => {});
+};
+
+// 页面隐藏时停止录制，避免后台空耗与数据异常
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && isRecording) {
+    if ($("chkPause").checked) {
+      stopRec();
+      $("sizeTip").textContent = "页面切到后台，已自动停止录制";
+    }
+  }
+});
+
+// 离开页面前释放资源
+window.addEventListener("pagehide", stopStream);
+
+/* ---------- 10. 启动 ---------- */
+checkEnv();
+updateClipBtns();
+// 让界面初始状态与复选框保持一致
+$("info").style.display = $("chkInfo").checked ? "" : "none";
+$("sizeTip").style.display = $("chkInfo").checked ? "" : "none";
+$("grid").style.display = $("chkGrid").checked ? "block" : "none";
+</script>
+</body>
+</html>
